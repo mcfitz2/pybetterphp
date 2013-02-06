@@ -13,7 +13,7 @@ class Client:
     def login(self):
         sys.stdout.write("Logging in...")
         sys.stdout.flush()
-        self.session.post("https://what.cd/login.php", data={"username":"mcfitz2", "password":"Cl0ser2g0d"})
+        self.session.post("https://what.cd/login.php", data={"username":self.user, "password":self.password})
         sys.stdout.write("Done!\n")
     def retrieve(self, num, destination):
         html = BS(self.session.get("https://what.cd/better.php",params={"method":"transcode", "type":"3"}).text)
