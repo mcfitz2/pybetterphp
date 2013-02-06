@@ -20,7 +20,7 @@ if os.path.exists(os.path.join(os.path.dirname(__file__),"config.json")):
         
 
 parser = argparse.ArgumentParser(description='Process some integers.')
-parser.add_argument('--retrieve', dest='retrieve', action='store_true')
+parser.add_argument('-r', dest='retrieve')
 parser.add_argument('--v0', dest='v0', action='store_true')
 parser.add_argument('--v2', dest='v2', action='store_true')
 parser.add_argument('--320', dest='m320', action='store_true')
@@ -31,7 +31,9 @@ parser.add_argument("--tl", dest="album")
 parser.add_argument("--ty", dest="date")
 parser.add_argument("--tg", dest="genre")
 parser.add_argument("-a", dest="announce")
-
+parser.add_argument("-u", dest="user")
+parser.add_argument("-p", dest="password")
+parser.add_argument("-n", dest="num", type=int)
 args = parser.parse_args()
 
 
@@ -42,8 +44,9 @@ args.announce = config.get('announce') or args.announce
 args.v0 =  args.v0 or config.get('V0')
 args.v2 = args.v2 or config.get('V2')
 args.m320 = args.m320 or config.get('320')
-
-
+args.user = args.user or config.get("user")
+args.password = args.password or config.get("password")
+args.num = args.num or 1
 
 def get_out_dir(fmt, fmt_dict):
     format_dict['format'] = fmt
@@ -56,9 +59,9 @@ def make_lame(filename, fmt_dict, fmt):
     l.outdir = get_out_dir(fmt, fmt_dict)
     return l
 if args.retrieve:
-    c = Client("mcfitz2", "Cl0ser2g0d")
+    c = Client(args.user, args.password)
     c.login()
-    c.retrieve(5)
+    c.retrieve(args.num, args.retrieve)
 elif (args.v0 or args.v2 or args.m320) and args.folder:
     folder = args.folder
     if not os.path.exists(folder):
