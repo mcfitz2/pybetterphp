@@ -1,7 +1,8 @@
-import argparse, os, re
+import argparse, os, re, time
 from betterphp.processors import Lame, Flac
 from betterphp.client import Client
 from betterphp.TagHandler import TagHandler
+from betterphp.Job import Job
 import sys
 from colorama import init, Fore
 from mutagen.flac import FLAC
@@ -25,14 +26,12 @@ parser.add_argument("--tg", dest="genre")
 
 
 args = parser.parse_args()
-def mkprogress(prefix):
-    def progress(percent):
-        msg = "Done!\n" if percent == 100 else "%d%%" % percent
-        sys.stdout.write("\r%s%s" % (prefix, msg))
-        sys.stdout.flush()
-    return progress
 
-
+def make_lame(filename, format_dict, format):
+    format_dict['format'] = format
+    outfile = os.path.join(DIR_FORMAT % format_dict, relpath, TRACK_FORMAT % format_dict)
+    l = Lame(format, tag_args, re.sub(r'\.flac$', r'.mp3', filename), outfile)
+    return l
 if args.retrieve:
     c = Client("mcfitz2", "Cl0ser2g0d")
     c.login()
@@ -44,45 +43,23 @@ elif args.encode and args.folder:
     if not os.path.isdir(folder):
         raise Exception("Given path is not a directory")
     to_remove = []
-    for path,  directories, files in os.walk(folder):
-        print Fore.YELLOW+"Processing directory %s" % path
-        flac_files = sorted([f for f in files if f.endswith('.flac')])
-        for i, f in enumerate(flac_files):
-            print Fore.GREEN+"Processing file %d of %d: %s" % (i+1, len(flac_files)+1, f)
-            root = folder
-            relpath = path.replace(folder, "")
-            print "\tReading tags..."
-            th = TagHandler(os.path.join(path, f), artist=args.artist, album=args.album, date=args.date, genre=args.genre)
-            th.prompt()
-            tag_args = th.gen_lame()
-            flac = Flac(['-d', '-f'], os.path.join(path, f))
-            infile = flac.run(mkprogress("\tDecompressing..."))
-            to_remove.append(infile)
-            format_dict = th.tags
-            format_dict['extension'] = "mp3"
-            if args.v0:
-                format_dict['format'] = 'V0'
-                outfile = os.path.join(DIR_FORMAT % format_dict, relpath, TRACK_FORMAT % format_dict)
-                print outfile
-                l = Lame(['-V0']+tag_args, infile, outfile)
-                if not args.dry:
-                    l.run(mkprogress("\tEncoding to V0..."))
-            if args.v2:
-                format_dict['format'] = 'V2'
-            
-                outfile = os.path.join(DIR_FORMAT % format_dict, relpath, TRACK_FORMAT % format_dict)
-                print outfile
-                l = Lame(['-V2']+tag_args, infile, outfile)
-                if not args.dry:
-                    l.run(mkprogress("\tEncoding to V2..."))
-            if args.m320:
-                format_dict['format'] = '320'
-            
-                outfile = os.path.join(DIR_FORMAT % format_dict, relpath, TRACK_FORMAT % format_dict)
-                print outfile
-                l = Lame(['-b320']+tag_args, infile, outfile)
-                if not args.dry:
-                    l.run(mkprogress("\tEncoding to CBR320..."))
-                        
-    for filename in to_remove:
-        os.remove(filename)
+    to_process = sorted([os.path.join(path, f) for path,  directories, files in os.walk(folder) for f in sorted([f for f in files if f.endswith('.flac')])])
+    for f in to_process:
+        print Fore.GREEN+"Processing"+ os.path.basename(f)
+        root = folder
+        relpath = f.replace(folder, "").replace(f, "")
+        th = TagHandler(f, artist=args.artist, album=args.album, date=args.date, genre=args.genre)
+        th.prompt()
+        tag_args = th.gen_lame()
+        flac = Flac(['-d'], f)
+        format_dict = th.tags
+        format_dict['extension'] = "mp3"
+        lames = []
+        if args.v0:
+            lames.append(make_lame(f, format_dict, "V0"))
+        if args.v2:
+            lames.append(make_lame(f, format_dict, "V2"))
+        if args.m320:
+            lames.append(make_lame(f, format_dict, "320"))
+        Job(flac, lames).run()
+
