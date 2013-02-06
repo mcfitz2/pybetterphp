@@ -3,6 +3,13 @@ class TagHandler:
     def __init__(self, filename, **kwargs):#artist=None, album=None, date=None, genre=None):
         self.tag = FLAC(filename)
         self.tags = {key:value for key, value in kwargs.iteritems() if value}
+        self._convert_to_int()
+    def _convert_to_int(self):
+        for key, value in self.tags.iteritems():
+            try:
+                self.tags[key] = int(value)
+            except:
+                continue
     def prompt(self):
         for field in ['artist', 'title', 'date', 'album', 'tracknumber']:
             if not field in self.tags.keys():
@@ -11,6 +18,7 @@ class TagHandler:
                 else:
                     print "Please provide a value for %s" % field
                     self.tags[field] = raw_input("> ")
+        self._convert_to_int()
     def gen_lame(self):
         args = ('--ta|"%(artist)s"|--tt|"%(title)s"|--tl|"%(album)s"|--ty|"%(date)s"|--tn|"%(tracknumber)s"' % self.tags).split('|')
         if self.tags.get('genre', None):

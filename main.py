@@ -6,8 +6,8 @@ import sys
 from colorama import init, Fore
 from mutagen.flac import FLAC
 
-
-
+DIR_FORMAT = "%(artist)s - %(album)s (%(date)s) [%(format)s]"
+TRACK_FORMAT = "%(tracknumber)02d. %(title)s.%(extension)s"
 init(autoreset=True)
 
 parser = argparse.ArgumentParser(description='Process some integers.')
@@ -17,7 +17,6 @@ parser.add_argument('--v0', dest='v0', action='store_true')
 parser.add_argument('--v2', dest='v2', action='store_true')
 parser.add_argument('--320', dest='m320', action='store_true')
 parser.add_argument('-i', dest='folder')
-parser.add_argument('-o', dest='format')
 parser.add_argument('--dry', dest="dry", action="store_true")
 parser.add_argument("--ta", dest="artist")
 parser.add_argument("--tl", dest="album")
@@ -40,7 +39,6 @@ if args.retrieve:
     c.retrieve(5)
 elif args.encode and args.folder:
     folder = args.folder
-    output = re.sub('/$', '', (args.format or os.path.basename(folder).strip() or folder)).lstrip()+"[%s]"
     if not os.path.exists(folder):
         raise Exception("Given path does not exist")
     if not os.path.isdir(folder):
@@ -52,7 +50,7 @@ elif args.encode and args.folder:
         for i, f in enumerate(flac_files):
             print Fore.GREEN+"Processing file %d of %d: %s" % (i+1, len(flac_files)+1, f)
             root = folder
-            relpath = os.path.join(path.replace(folder, ""), f)
+            relpath = path.replace(folder, "")
             print "\tReading tags..."
             th = TagHandler(os.path.join(path, f), artist=args.artist, album=args.album, date=args.date, genre=args.genre)
             th.prompt()
@@ -60,19 +58,28 @@ elif args.encode and args.folder:
             flac = Flac(['-d', '-f'], os.path.join(path, f))
             infile = flac.run(mkprogress("\tDecompressing..."))
             to_remove.append(infile)
-            
+            format_dict = th.tags
+            format_dict['extension'] = "mp3"
             if args.v0:
-                outfile = os.path.join(output % "V0", re.sub("\.flac$", ".mp3",relpath))
+                format_dict['format'] = 'V0'
+                outfile = os.path.join(DIR_FORMAT % format_dict, relpath, TRACK_FORMAT % format_dict)
+                print outfile
                 l = Lame(['-V0']+tag_args, infile, outfile)
                 if not args.dry:
                     l.run(mkprogress("\tEncoding to V0..."))
             if args.v2:
-                outfile = os.path.join(output % "V2", re.sub("\.flac$", ".mp3",relpath))
+                format_dict['format'] = 'V2'
+            
+                outfile = os.path.join(DIR_FORMAT % format_dict, relpath, TRACK_FORMAT % format_dict)
+                print outfile
                 l = Lame(['-V2']+tag_args, infile, outfile)
                 if not args.dry:
                     l.run(mkprogress("\tEncoding to V2..."))
             if args.m320:
-                outfile = os.path.join(output % "320", re.sub("\.flac$", ".mp3",relpath))
+                format_dict['format'] = '320'
+            
+                outfile = os.path.join(DIR_FORMAT % format_dict, relpath, TRACK_FORMAT % format_dict)
+                print outfile
                 l = Lame(['-b320']+tag_args, infile, outfile)
                 if not args.dry:
                     l.run(mkprogress("\tEncoding to CBR320..."))
