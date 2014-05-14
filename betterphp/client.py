@@ -12,10 +12,10 @@ class Client:
     def login(self):
         sys.stdout.write("Logging in...")
         sys.stdout.flush()
-        self.session.post("https://what.cd/login.php", data={"username":"mcfitz2", "password":"Cl0ser2g0d"})
+        self.session.post("https://ssl.what.cd/login.php", data={"username":"mcfitz2", "password":"Cl0ser2g0d"})
         sys.stdout.write("Done!\n")
     def retrieve(self, num, destination=None):
-        html = BS(self.session.get("https://what.cd/better.php",params={"method":"transcode", "type":"3"}).text)
+        html = BS(self.session.get("https://ssl.what.cd/better.php",params={"method":"transcode", "type":"3"}).text)
         cd = re.compile('\w+; filename="(.+\.torrent)"')
         i = 0
         for tr in html.findAll('tr'):
